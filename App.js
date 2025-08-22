@@ -1,0 +1,87 @@
+const express = require('express');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(express.json());
+
+//metodo idempotente
+app.get('/', (req, res) => {
+  res.send('Si funciona');
+});
+
+//metodo idempotente
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
+});
+
+app.post('/api/echo', (req, res) => {
+  const data = req.body;
+  if (!data || Object.keys(data).length === 0) {
+    return res.status(400).json({ error: 'Cuerpo JSON vacío o inválido' });
+  }
+  res.status(201).json({ received: data });
+});
+
+//metodo idempotente
+app.head('/api/health', (req, res) => {
+  res.status(200).end();
+});
+
+//metodo idempotente
+app.put('/api/usuario/:id', (req, res) => {
+  const { id } = req.params;
+  const { nombre, email } = req.body;
+  if (!nombre || !email) {
+    return res.status(400).json({ error: 'Faltan campos obligatorios (nombre, email)' });
+  }
+  res.status(200).json({
+    mensaje: `Usuario ${id} actualizado`,
+    usuario: { id, nombre, email }
+  });
+});
+
+//metodo idempotente
+app.delete('/api/usuario/:id', (req, res) => {
+  const { id } = req.params;
+  res.status(200).json({
+    mensaje: `Usuario ${id} eliminado correctamente`
+  });
+});
+
+//405 Method Not Allowed: El método HTTP utilizado no está permitido para la ruta especificada.
+app.all('/api/health', (req, res, next) => {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Método no permitido' });
+  }
+  next();
+});
+
+//410 Gone: El recurso solicitado ya no está disponible y no hay redirección posible.
+app.get('/api/eliminado',(req, res) => {
+  res.status(410).json({ error: 'Archivo eliminado' });
+});
+
+//404 Not Found: El servidor no pudo encontrar el contenido solicitado.
+app.use((req, res) => {
+  res.status(404).json({ error: 'Ruta no encontrada' });
+});
+
+//400 Bad Request: El servidor no pudo procesar la solicitud debido a un error de sintaxis o parámetros inválidos.
+app.use((req, res) => {
+  res.status(400).json({ error: 'Bad Request' });
+});
+
+//500 Internal Server Error: El servidor encontró un error al procesar la solicitud.
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ error: 'Error interno' });
+});
+
+app.listen(PORT, () => {
+  console.log(`Servidor escuchando en http://localhost:${PORT}`);
+});
