@@ -19,6 +19,6 @@ async function startServer(){
     }
 }
 
-startServer();
-
 app.use(routes.unprotectedRoutes);
+
+startServer();
